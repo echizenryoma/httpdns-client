@@ -12,7 +12,7 @@ import (
 
 var (
 	ip   = *flag.String("ip", "127.0.0.1", "DNS bind IP address")
-	port = *flag.Int("port", 53, "listen on port number")
+	port = *flag.Int("port", 53, "Listen on port")
 )
 
 type dnsMessage struct {
@@ -35,7 +35,7 @@ func handle(buf []byte, udpAddress *net.UDPAddr, udpConnection *net.UDPConn) {
 
 	answer, found := getFromCache(message.Question[0])
 	if !found {
-		answer = resolve(*message)
+		answer = submitQuetion(*message)
 		if answer.Answer != nil {
 			dnsCache.Set(message.Question[0].Name, answer, 10*time.Second)
 		}
@@ -48,7 +48,7 @@ func handle(buf []byte, udpAddress *net.UDPAddr, udpConnection *net.UDPConn) {
 	udpConnection.WriteToUDP(buffer, udpAddress)
 }
 
-func resolve(question dns.Msg) dns.Msg {
+func submitQuetion(question dns.Msg) dns.Msg {
 	answer := make(chan dns.Msg, 1)
 	channel <- dnsMessage{question, &answer}
 	return <-answer

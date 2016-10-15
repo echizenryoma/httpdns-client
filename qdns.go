@@ -28,18 +28,19 @@ func getTencentHTTPDNS(server string) {
 	var httpClient = &http.Client{Timeout: time.Second * 10, Transport: http.DefaultTransport.(*http.Transport)}
 
 	for query := range channel {
-		answer := new(dns.Msg)
-		answer.Compress = true
+		answer := dns.Msg{
+			Compress: true,
+		}
 		answer.Truncated = false
 		answer.RecursionDesired = true
 		answer.RecursionAvailable = true
 		answer.AuthenticatedData = false
 		answer.CheckingDisabled = false
+
 		answer.SetReply(&query.Question)
 
 		url := fmt.Sprintf("http://%s/d?dn=%s", server, query.Question.Question[0].Name)
 		httpGet, _ := http.NewRequest("GET", url, nil)
-
 		response, err := httpClient.Do(httpGet)
 		if err == nil {
 			buffer, _ := ioutil.ReadAll(response.Body)
@@ -72,6 +73,6 @@ func getTencentHTTPDNS(server string) {
 			answer.Rcode = dns.RcodeServerFailure
 			log.Println(err.Error())
 		}
-		*query.Answer <- *answer
+		*query.Answer <- answer
 	}
 }

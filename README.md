@@ -12,14 +12,14 @@ go build -ldflags "-s -w" .
 
 ```
 Usage of qdns.exe:
-  -db
-        Save result to sqlite (default true)
   -ip string
         DNS bind IP address (default "127.0.0.1")
   -path string
         Sqlite path (default "insight.sqlite")
   -port int
-        listen on port number (default 53)
+        listen on port (default 53)
+  -save
+        Save result to sqlite (default true)
   -server string
         Tencent HTTP DNS address (default "119.29.29.29")
   -workers int
