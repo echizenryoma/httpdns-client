@@ -70,6 +70,7 @@ func getTencentHTTPDNS(query dns.Msg) (dns.Msg, bool) {
 					}
 					dnsRR, _ := dns.NewRR(header.String() + ip)
 					answer.Answer = append(answer.Answer, dnsRR)
+					log.Printf("%s|%s\n", query.Question[0].Name, string(buffer))
 				}
 			}
 		} else {

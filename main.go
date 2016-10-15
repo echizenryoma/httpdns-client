@@ -41,7 +41,7 @@ func handle(buf []byte, udpAddress *net.UDPAddr, udpConnection *net.UDPConn) {
 			putCache(message.Question[0], answer)
 		}
 	}
-	log.Print(printDNS(answer))
+	log.Println(questionKey(message.Question[0]))
 	buffer, err := answer.Pack()
 	if err != nil {
 		log.Println(err)
