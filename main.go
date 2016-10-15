@@ -2,14 +2,12 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"math/rand"
 	"net"
 	"time"
 
 	"github.com/miekg/dns"
-	"github.com/patrickmn/go-cache"
 )
 
 var (
@@ -17,107 +15,58 @@ var (
 	port = *flag.Int("port", 53, "listen on port number")
 )
 
-type resourceRecord struct {
-	Name string
-	Type uint16
-	TTL  uint32
-	Data string
+type dnsMessage struct {
+	Question dns.Msg
+	Answer   *chan dns.Msg
 }
 
-type resolveData struct {
-	Status int
-	Answer []resourceRecord
-	Now    time.Time
-}
-
-type resolveQuery struct {
-	Name           string
-	Type           uint16
-	resolveChannel *chan resolveData
-}
-
-var queryChannel = make(chan resolveQuery, 256)
-var resolveCache *cache.Cache
+var channel = make(chan dnsMessage, 256)
 
 func handle(buf []byte, udpAddress *net.UDPAddr, udpConnection *net.UDPConn) {
-	dnsMessage := new(dns.Msg)
-	if err := dnsMessage.Unpack(buf); err != nil {
+	message := new(dns.Msg)
+	if err := message.Unpack(buf); err != nil {
 		log.Println(err)
 		return
 	}
 
-	if len(dnsMessage.Question) < 1 {
+	if len(message.Question) <= 0 {
 		return
 	}
 
-	var r resolveData
-	cid := fmt.Sprintf("%s/%d", dnsMessage.Question[0].Name, dnsMessage.Question[0].Qtype)
-
-	if data, found := resolveCache.Get(cid); found {
-		r = data.(resolveData)
-	} else {
-		r = resolve(dnsMessage.Question[0].Name, dnsMessage.Question[0].Qtype)
-		resolveCache.Set(cid, r, 10*time.Second)
-	}
-
-	resolveMessage := new(dns.Msg)
-	resolveMessage.SetReply(dnsMessage)
-	resolveMessage.Compress = true
-	if r.Status >= 0 {
-		resolveMessage.Rcode = r.Status
-		resolveMessage.Truncated = false
-		resolveMessage.RecursionDesired = true
-		resolveMessage.RecursionAvailable = true
-		resolveMessage.AuthenticatedData = false
-		resolveMessage.CheckingDisabled = false
-
-		for _, httpDNSRR := range r.Answer {
-			resolveMessage.Answer = append(resolveMessage.Answer, convertDNSRR(httpDNSRR))
+	answer, found := getFromCache(message.Question[0])
+	if !found {
+		answer = resolve(*message)
+		if answer.Answer != nil {
+			dnsCache.Set(message.Question[0].Name, answer, 10*time.Second)
 		}
-	} else {
-		resolveMessage.Rcode = 2
 	}
-
-	buffer, err := resolveMessage.Pack()
+	buffer, err := answer.Pack()
 	if err != nil {
-		log.Fatalln(err)
+		log.Println(err)
 		return
 	}
 	udpConnection.WriteToUDP(buffer, udpAddress)
 }
 
-func convertDNSRR(ResourceRecord resourceRecord) dns.RR {
-	DNSRRHeader := dns.RR_Header{
-		Name:   ResourceRecord.Name,
-		Rrtype: ResourceRecord.Type,
-		Class:  dns.ClassINET,
-		Ttl:    ResourceRecord.TTL,
-	}
-	DNSRR, _ := dns.NewRR(DNSRRHeader.String() + ResourceRecord.Data)
-	return DNSRR
-}
-
-func resolve(name string, qtype uint16) resolveData {
-	query := make(chan resolveData, 1)
-	queryChannel <- resolveQuery{name, qtype, &query}
-	return <-query
+func resolve(question dns.Msg) dns.Msg {
+	answer := make(chan dns.Msg, 1)
+	channel <- dnsMessage{question, &answer}
+	return <-answer
 }
 
 func main() {
 	flag.Parse()
-
+	newDNSCache()
 	if save {
 		initDb()
 	}
-
 	rand.Seed(time.Now().UnixNano())
-	resolveCache = cache.New(24*time.Hour, 60*time.Second)
 
-	laddr := net.UDPAddr{
+	listenUDP := net.UDPAddr{
 		IP:   net.ParseIP(ip),
 		Port: port,
 	}
-	dnsServer, err := net.ListenUDP("udp", &laddr)
+	dnsServer, err := net.ListenUDP("udp", &listenUDP)
 	if err != nil {
 		log.Fatalln(err.Error())
 	}

@@ -15,25 +15,29 @@ import (
 
 var (
 	workers = *flag.Int("workers", 10, "number of independent workers")
-	server  = *flag.String("server", "119.29.29.29", "Tencent HTTP DNS address")
+	server  = *flag.String("server", tencentPublicDNS, "Tencent HTTP DNS address")
 )
 
 func start() {
 	for i := 0; i < workers; i++ {
-		go dnsResolve(server)
+		go getTencentHTTPDNS(server)
 	}
 }
 
-func dnsResolve(server string) {
-	var httpTr = http.DefaultTransport.(*http.Transport)
-	var httpClient = &http.Client{Timeout: time.Second * 10, Transport: httpTr}
+func getTencentHTTPDNS(server string) {
+	var httpClient = &http.Client{Timeout: time.Second * 10, Transport: http.DefaultTransport.(*http.Transport)}
 
-	for query := range queryChannel {
-		resolve := resolveData{
-			Status: -1,
-		}
+	for query := range channel {
+		answer := new(dns.Msg)
+		answer.Compress = true
+		answer.Truncated = false
+		answer.RecursionDesired = true
+		answer.RecursionAvailable = true
+		answer.AuthenticatedData = false
+		answer.CheckingDisabled = false
+		answer.SetReply(&query.Question)
 
-		url := fmt.Sprintf("http://%s/d?dn=%s", server, query.Name)
+		url := fmt.Sprintf("http://%s/d?dn=%s", server, query.Question.Question[0].Name)
 		httpGet, _ := http.NewRequest("GET", url, nil)
 
 		response, err := httpClient.Do(httpGet)
@@ -42,28 +46,32 @@ func dnsResolve(server string) {
 			response.Body.Close()
 
 			if response.StatusCode == 200 {
-				resolve.Status = 0
-				answers := strings.Split(string(buffer), ";")
-				if query.Type == dns.TypeA {
+				ipList := strings.Split(string(buffer), ";")
+				if query.Question.Question[0].Qtype == dns.TypeA && len(ipList) > 0 {
+					answer.Rcode = dns.RcodeSuccess
 					if save {
-						insertRecode(query.Name, string(buffer))
+						insertRecode(query.Question.Question[0].Name, string(buffer))
 					}
-					for _, answer := range answers {
-						resolve.Answer = append(resolve.Answer, resourceRecord{
-							Name: query.Name,
-							Type: 1,
-							TTL:  255,
-							Data: answer,
-						})
+					for _, ip := range ipList {
+						header := dns.RR_Header{
+							Name:   query.Question.Question[0].Name,
+							Rrtype: query.Question.Question[0].Qtype,
+							Class:  dns.ClassINET,
+							Ttl:    255,
+						}
+						dnsRR, _ := dns.NewRR(header.String() + ip)
+						answer.Answer = append(answer.Answer, dnsRR)
 					}
-					resolve.Now = time.Now()
-					buffer, _ := json.Marshal(resolve)
+					buffer, _ := json.Marshal(answer)
 					log.Println(string(buffer))
 				}
+			} else {
+				answer.Rcode = dns.RcodeServerFailure
 			}
 		} else {
+			answer.Rcode = dns.RcodeServerFailure
 			log.Println(err.Error())
 		}
-		*query.resolveChannel <- resolve
+		*query.Answer <- *answer
 	}
 }
