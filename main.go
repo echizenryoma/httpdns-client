@@ -34,12 +34,14 @@ func handle(buf []byte, udpAddress *net.UDPAddr, udpConnection *net.UDPConn) {
 	}
 
 	answer, found := getFromCache(message.Question[0])
+
 	if !found {
 		answer = submitQuetion(*message)
 		if answer.Answer != nil {
 			putCache(message.Question[0], answer)
 		}
 	}
+	log.Print(printDNS(answer))
 	buffer, err := answer.Pack()
 	if err != nil {
 		log.Println(err)

@@ -11,7 +11,7 @@ import (
 var dnsCache *lrucache.LRUCache
 
 func newDNSCache() {
-	dnsCache = lrucache.NewLRUCache(uint(128 * 1024 * 1024))
+	dnsCache = lrucache.NewLRUCache(uint(1024))
 }
 
 func getFromCache(question dns.Question) (dns.Msg, bool) {

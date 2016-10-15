@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -31,17 +30,14 @@ func getDNS() {
 		case dns.TypeA:
 			answer, _ = getTencentHTTPDNS(query.Question)
 			break
-		// case dns.TypeAAAA:
-		// case dns.TypePTR:
-		// 	answer.Response = false
-		// 	answer.Rcode = dns.RcodeServerFailure
-		// 	break
+		case dns.TypeAAAA:
+			answer.Response = false
+			answer.Rcode = dns.RcodeServerFailure
+			break
 		default:
 			answer, _ = getClientDNS(query.Question)
 		}
 		answer.SetReply(&query.Question)
-		buffer, _ := json.Marshal(answer)
-		log.Println(string(buffer))
 		*query.Answer <- answer
 	}
 }
