@@ -23,3 +23,7 @@ func getFromCache(question dns.Question) (dns.Msg, bool) {
 	}
 	return dns.Msg{}, false
 }
+
+func putCache(domain string, answer dns.Msg) {
+	dnsCache.Set(domain, answer, 10*time.Second)
+}

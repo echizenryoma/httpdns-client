@@ -58,7 +58,6 @@ func getTencentHTTPDNS(query dns.Msg) (dns.Msg, bool) {
 	if err == nil {
 		buffer, _ := ioutil.ReadAll(response.Body)
 		response.Body.Close()
-
 		if response.StatusCode == 200 {
 			ipList := strings.Split(string(buffer), ";")
 			if query.Question[0].Qtype == dns.TypeA && len(ipList) > 0 {

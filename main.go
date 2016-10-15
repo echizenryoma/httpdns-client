@@ -37,7 +37,7 @@ func handle(buf []byte, udpAddress *net.UDPAddr, udpConnection *net.UDPConn) {
 	if !found {
 		answer = submitQuetion(*message)
 		if answer.Answer != nil {
-			dnsCache.Set(message.Question[0].Name, answer, 10*time.Second)
+			putCache(message.Question[0].Name, answer)
 		}
 	}
 	buffer, err := answer.Pack()
