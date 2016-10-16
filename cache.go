@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cloudflare/golibs/lrucache"
 	"github.com/miekg/dns"
+	cache "github.com/patrickmn/go-cache"
 )
 
-var dnsCache *lrucache.LRUCache
+var dnsCache *cache.Cache
 
 func newDNSCache() {
-	dnsCache = lrucache.NewLRUCache(uint(1024))
+	dnsCache = cache.New(24*time.Hour, 60*time.Second)
 }
 
 func getFromCache(question dns.Question) (dns.Msg, bool) {
@@ -30,5 +30,5 @@ func questionKey(question dns.Question) string {
 }
 
 func putCache(question dns.Question, answer dns.Msg) {
-	dnsCache.Set(questionKey(question), answer, time.Now().Add(60*time.Second))
+	dnsCache.Set(questionKey(question), answer, 10*time.Second)
 }
