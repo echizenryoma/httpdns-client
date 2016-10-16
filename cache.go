@@ -30,5 +30,30 @@ func questionKey(question dns.Question) string {
 }
 
 func putCache(question dns.Question, answer dns.Msg) {
-	dnsCache.Set(questionKey(question), answer, 10*time.Second)
+	// buffer, _ := json.Marshal(answer)
+	// log.Println(string(buffer))
+	if answer.Rcode == dns.RcodeSuccess {
+		ttl := uint32(10)
+		for _, header := range answer.Answer {
+			rr := *(header.Header())
+			if ttl < rr.Ttl {
+				ttl = rr.Ttl
+			}
+		}
+
+		for _, header := range answer.Ns {
+			rr := *(header.Header())
+			if ttl < rr.Ttl {
+				ttl = rr.Ttl
+			}
+		}
+
+		for _, header := range answer.Extra {
+			rr := *(header.Header())
+			if ttl < rr.Ttl {
+				ttl = rr.Ttl
+			}
+		}
+		dnsCache.Set(questionKey(question), answer, time.Duration(ttl)*time.Second)
+	}
 }
