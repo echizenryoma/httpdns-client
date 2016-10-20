@@ -14,8 +14,6 @@ go build -ldflags "-s -w" .
 Usage of qdns.exe:
   -ip string
         DNS bind IP address (default "127.0.0.1")
-  -path string
-        Sqlite path (default "insight.sqlite")
   -port int
         listen on port (default 53)
   -save

@@ -14,7 +14,7 @@ import (
 
 var (
 	workers = *flag.Int("workers", 10, "number of independent workers")
-	server  = *flag.String("server", tencentPublicDNS, "Tencent HTTP DNS address")
+	httpdns = *flag.String("httpdns", tencentPublicDNS, "Tencent HTTP DNS address")
 )
 
 func start() {
@@ -41,7 +41,7 @@ func getDNS() {
 func getTencentHTTPDNS(query dns.Msg) (dns.Msg, bool) {
 	var httpClient = &http.Client{Timeout: time.Second * 3, Transport: http.DefaultTransport.(*http.Transport)}
 
-	url := fmt.Sprintf("http://%s/d?dn=%s", server, query.Question[0].Name)
+	url := fmt.Sprintf("http://%s/d?dn=%s", httpdns, query.Question[0].Name)
 	httpGet, _ := http.NewRequest("GET", url, nil)
 	response, err := httpClient.Do(httpGet)
 

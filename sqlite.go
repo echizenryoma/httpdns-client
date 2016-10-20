@@ -14,18 +14,18 @@ import (
 
 var (
 	save = *flag.Bool("save", true, "Whether to save the results to a sqlite")
-	path = *flag.String("path", fmt.Sprintf("%d-%02d.sqlite", time.Now().Year(), time.Now().Month()), "path of sqlite")
 )
 
 var dbConnect *sql.DB
+var dbPath = fmt.Sprintf("%d-%02d.sqlite", time.Now().Year(), time.Now().Month())
 
 func initDb() {
-	log.Printf("Resolve result save at %s", path)
+	log.Printf("Resolve result save at %s", dbPath)
 	var err error
-	if _, err = os.Stat(path); err == nil {
-		dbConnect, err = sql.Open("sqlite3", path)
+	if _, err = os.Stat(dbPath); err == nil {
+		dbConnect, err = sql.Open("sqlite3", dbPath)
 	} else {
-		dbConnect, err = sql.Open("sqlite3", path)
+		dbConnect, err = sql.Open("sqlite3", dbPath)
 		createDatabase()
 	}
 
@@ -41,7 +41,7 @@ func createDatabase() {
 
 func insertRecode(domain string, ips string) {
 	now := time.Now()
-	domain = domain[0:len(domain) - 1]
+	domain = domain[0 : len(domain)-1]
 	tld, _ := publicsuffix.EffectiveTLDPlusOne(domain)
 	_, err := dbConnect.Exec("insert into resolve (timestamp, time, tld, domain, ips) values (?, ?, ?, ?, ?)", now.Unix(), now, tld, domain, ips)
 	if err != nil {
