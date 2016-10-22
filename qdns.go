@@ -13,11 +13,15 @@ import (
 )
 
 var (
-	workers = *flag.Int("workers", 10, "number of independent workers")
-	httpdns = *flag.String("httpdns", tencentPublicDNS, "Tencent HTTP DNS address")
+	workers     = *flag.Int("workers", 10, "number of independent workers")
+	httpDNS     = *flag.String("httpdns", tencentPublicDNS, "Tencent HTTP DNS address")
+	upstreamDNS = *flag.String("httpdns", tencentPublicDNS, "Upstream DNS Server Address")
 )
 
+var dnsServer []string
+
 func start() {
+	dnsServer = strings.Split(upstreamDNS, ";")
 	for i := 0; i < workers; i++ {
 		go getDNS()
 	}
@@ -28,25 +32,25 @@ func getDNS() {
 		answer := dns.Msg{}
 		switch query.Question.Question[0].Qtype {
 		case dns.TypeA:
-			answer, _ = getTencentHTTPDNS(query.Question)
+			answer, _ = getTencentHTTPDNS(&query.Question)
 			break
 		default:
-			answer, _ = getClientDNS(query.Question)
+			answer, _ = getClientDNS(&query.Question)
 		}
-		answer.SetReply(&query.Question)
+		*answer.SetReply(&query.Question)
 		*query.Answer <- answer
 	}
 }
 
-func getTencentHTTPDNS(query dns.Msg) (dns.Msg, bool) {
+func getTencentHTTPDNS(query *dns.Msg) (*dns.Msg, bool) {
 	var httpClient = &http.Client{Timeout: time.Second * 3, Transport: http.DefaultTransport.(*http.Transport)}
 
-	url := fmt.Sprintf("http://%s/d?dn=%s", httpdns, query.Question[0].Name)
+	url := fmt.Sprintf("http://%s/d?dn=%s", httpDNS, query.Question[0].Name)
 	httpGet, _ := http.NewRequest("GET", url, nil)
 	response, err := httpClient.Do(httpGet)
 
 	result := true
-	answer := dns.Msg{}
+	answer := new(dns.Msg)
 	if err == nil {
 		buffer, _ := ioutil.ReadAll(response.Body)
 		response.Body.Close()
@@ -81,7 +85,7 @@ func getTencentHTTPDNS(query dns.Msg) (dns.Msg, bool) {
 	return answer, result
 }
 
-func getClientDNS(query dns.Msg) (dns.Msg, bool) {
+func getClientDNS(query *dns.Msg) (*dns.Msg, bool) {
 	message := new(dns.Msg)
 	message.SetQuestion(query.Question[0].Name, query.Question[0].Qtype)
 	if query.Question[0].Qtype == dns.TypePTR && query.Question[0].Name == "1.0.0.127.in-addr.arpa." {
@@ -101,21 +105,19 @@ func getClientDNS(query dns.Msg) (dns.Msg, bool) {
 		answer.Answer = append(answer.Answer, rr)
 		// buffer, _ := json.Marshal(answer)
 		// log.Println(string(buffer))
-		return *answer, true
+		return answer, true
 	}
 
-	dnsClient := new(dns.Client)
-	answer, _, err := dnsClient.Exchange(message, server+":53")
-	if err != nil {
-		log.Println(err.Error())
-		return dns.Msg{}, false
+	for _, server := range dnsServer {
+		dnsClient := new(dns.Client)
+		answer, _, err := dnsClient.Exchange(message, server+":53")
+		if err != nil {
+			log.Println(err.Error())
+			continue
+		}
+		if answer.Rcode == dns.RcodeSuccess {
+			return answer, true
+		}
 	}
-	if answer == nil {
-		return dns.Msg{}, false
-	}
-	if answer.Rcode != dns.RcodeSuccess {
-		log.Println(err.Error())
-		return dns.Msg{}, false
-	}
-	return *answer, true
+	return nil, false
 }

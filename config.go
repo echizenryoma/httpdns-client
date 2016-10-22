@@ -6,6 +6,10 @@ import (
 	"os"
 )
 
+const (
+	tencentPublicDNS = "119.29.29.29"
+)
+
 type config struct {
 	ListenIP      string   `json:"ip"`
 	ListenPort    string   `json:"port"`
@@ -14,7 +18,7 @@ type config struct {
 	Workers       uint16   `json:"workers"`
 }
 
-func getConfigFromFile(path string) (*config, error) {
+func getConfig(path string) (*config, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err

@@ -14,22 +14,23 @@ func newDNSCache() {
 	dnsCache = cache.New(24*time.Hour, 60*time.Second)
 }
 
-func getFromCache(question dns.Question) (dns.Msg, bool) {
+func getFromCache(question *dns.Question) *dns.Msg {
 	if question.Qtype != dns.TypeA {
-		return dns.Msg{}, false
+		return nil
 	}
-	data, found := dnsCache.Get(questionKey(question))
+	data, found := dnsCache.Get(getDNSKey(question))
+	answer := data.(dns.Msg)
 	if found {
-		return data.(dns.Msg), true
+		return &answer
 	}
-	return dns.Msg{}, false
+	return nil
 }
 
-func questionKey(question dns.Question) string {
+func getDNSKey(question *dns.Question) string {
 	return fmt.Sprintf("%s|%d|%d", question.Name, question.Qclass, question.Qtype)
 }
 
-func putCache(question dns.Question, answer dns.Msg) {
+func putCache(question *dns.Question, answer *dns.Msg) {
 	// buffer, _ := json.Marshal(answer)
 	// log.Println(string(buffer))
 	if answer.Rcode == dns.RcodeSuccess {
@@ -54,6 +55,6 @@ func putCache(question dns.Question, answer dns.Msg) {
 				ttl = rr.Ttl
 			}
 		}
-		dnsCache.Set(questionKey(question), answer, time.Duration(ttl)*time.Second)
+		dnsCache.Set(getDNSKey(question), *answer, time.Duration(ttl)*time.Second)
 	}
 }
