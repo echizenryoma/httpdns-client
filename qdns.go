@@ -15,7 +15,7 @@ import (
 var (
 	workers     = *flag.Int("workers", 10, "number of independent workers")
 	httpDNS     = *flag.String("httpdns", tencentPublicDNS, "Tencent HTTP DNS address")
-	upstreamDNS = *flag.String("httpdns", tencentPublicDNS, "Upstream DNS Server Address")
+	upstreamDNS = *flag.String("dns", tencentPublicDNS, "Upstream DNS Server Address")
 )
 
 var dnsServer []string
@@ -29,42 +29,43 @@ func start() {
 
 func getDNS() {
 	for query := range channel {
-		answer := dns.Msg{}
-		switch query.Question.Question[0].Qtype {
+		answer := new(dns.Msg)
+		question := query.Question.Question[0]
+		switch question.Qtype {
 		case dns.TypeA:
-			answer, _ = getTencentHTTPDNS(&query.Question)
+			answer = getTencentHTTPDNS(query.Question)
 			break
 		default:
-			answer, _ = getClientDNS(&query.Question)
+			answer = getClientDNS(query.Question)
 		}
-		*answer.SetReply(&query.Question)
+		answer.SetReply(query.Question)
 		*query.Answer <- answer
 	}
 }
 
-func getTencentHTTPDNS(query *dns.Msg) (*dns.Msg, bool) {
+func getTencentHTTPDNS(query *dns.Msg) *dns.Msg {
 	var httpClient = &http.Client{Timeout: time.Second * 3, Transport: http.DefaultTransport.(*http.Transport)}
 
 	url := fmt.Sprintf("http://%s/d?dn=%s", httpDNS, query.Question[0].Name)
 	httpGet, _ := http.NewRequest("GET", url, nil)
 	response, err := httpClient.Do(httpGet)
 
-	result := true
 	answer := new(dns.Msg)
+	qustion := query.Question[0]
 	if err == nil {
 		buffer, _ := ioutil.ReadAll(response.Body)
 		response.Body.Close()
 		if response.StatusCode == 200 {
 			ipList := strings.Split(string(buffer), ";")
-			if query.Question[0].Qtype == dns.TypeA && len(ipList) > 0 {
+			if qustion.Qtype == dns.TypeA && len(ipList) > 0 {
 				answer.Rcode = dns.RcodeSuccess
 				if save {
-					insertRecode(query.Question[0].Name, string(buffer))
+					insertRecode(qustion.Name, string(buffer))
 				}
 				for _, ip := range ipList {
 					header := dns.RR_Header{
-						Name:   query.Question[0].Name,
-						Rrtype: query.Question[0].Qtype,
+						Name:   qustion.Name,
+						Rrtype: qustion.Qtype,
 						Class:  dns.ClassINET,
 						Ttl:    10,
 					}
@@ -75,22 +76,20 @@ func getTencentHTTPDNS(query *dns.Msg) (*dns.Msg, bool) {
 			log.Printf("%s|%s\n", query.Question[0].Name, string(buffer))
 		} else {
 			answer.Rcode = dns.RcodeServerFailure
-			result = false
 		}
 	} else {
-		result = false
 		answer.Rcode = dns.RcodeServerFailure
 		log.Println(err.Error())
 	}
-	return answer, result
+	return answer
 }
 
-func getClientDNS(query *dns.Msg) (*dns.Msg, bool) {
+func getClientDNS(query *dns.Msg) *dns.Msg {
 	message := new(dns.Msg)
 	message.SetQuestion(query.Question[0].Name, query.Question[0].Qtype)
+	answer := new(dns.Msg)
 	if query.Question[0].Qtype == dns.TypePTR && query.Question[0].Name == "1.0.0.127.in-addr.arpa." {
 		localhost := "tencent.http.dns."
-		answer := new(dns.Msg)
 		answer.Question = append(answer.Question, query.Question[0])
 		header := dns.RR_Header{
 			Name:     query.Question[0].Name,
@@ -105,7 +104,7 @@ func getClientDNS(query *dns.Msg) (*dns.Msg, bool) {
 		answer.Answer = append(answer.Answer, rr)
 		// buffer, _ := json.Marshal(answer)
 		// log.Println(string(buffer))
-		return answer, true
+		return answer
 	}
 
 	for _, server := range dnsServer {
@@ -116,8 +115,9 @@ func getClientDNS(query *dns.Msg) (*dns.Msg, bool) {
 			continue
 		}
 		if answer.Rcode == dns.RcodeSuccess {
-			return answer, true
+			return answer
 		}
 	}
-	return nil, false
+	answer.Rcode = dns.RcodeServerFailure
+	return answer
 }

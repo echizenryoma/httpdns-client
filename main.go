@@ -16,8 +16,8 @@ var (
 )
 
 type dnsMessage struct {
-	Question dns.Msg
-	Answer   *chan dns.Msg
+	Question *dns.Msg
+	Answer   *chan *dns.Msg
 }
 
 var channel = make(chan dnsMessage, 256)
@@ -33,26 +33,25 @@ func handle(dnsQueryMsg []byte, dnsQueryAddress *net.UDPAddr, udpConnection *net
 		return
 	}
 	question := &message.Question[0]
+	log.Println(getDNSKey(question))
 	answer := getFromCache(question)
-
 	if answer == nil {
-		answer := resolveDNSQuestion(message)
+		answer = resolveDNSQuestion(message)
 		if answer.Answer != nil {
-			putCache(question, &answer)
+			putCache(question, answer)
 		}
 	}
-	log.Println(getDNSKey(question))
 	buffer, err := answer.Pack()
 	if err != nil {
-		log.Println(err)
+		log.Println(err.Error())
 		return
 	}
 	udpConnection.WriteToUDP(buffer, dnsQueryAddress)
 }
 
-func resolveDNSQuestion(question *dns.Msg) dns.Msg {
-	answer := make(chan dns.Msg, 1)
-	channel <- dnsMessage{*question, answer}
+func resolveDNSQuestion(question *dns.Msg) *dns.Msg {
+	answer := make(chan *dns.Msg, 1)
+	channel <- dnsMessage{question, &answer}
 	return <-answer
 }
 
