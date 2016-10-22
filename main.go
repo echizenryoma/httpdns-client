@@ -16,42 +16,41 @@ var (
 )
 
 type dnsMessage struct {
-	Question dns.Msg
-	Answer   *chan dns.Msg
+	Question *dns.Msg
+	Answer   *chan *dns.Msg
 }
 
 var channel = make(chan dnsMessage, 256)
 
-func handle(buf []byte, udpAddress *net.UDPAddr, udpConnection *net.UDPConn) {
+func handle(dnsQueryMsg []byte, dnsQueryAddress *net.UDPAddr, udpConnection *net.UDPConn) {
 	message := new(dns.Msg)
-	if err := message.Unpack(buf); err != nil {
-		log.Println(err)
+	if err := message.Unpack(dnsQueryMsg); err != nil {
+		log.Println(err.Error())
 		return
 	}
 
 	if len(message.Question) <= 0 {
 		return
 	}
-
-	answer, found := getFromCache(message.Question[0])
-
-	if !found {
-		answer = submitQuetion(*message)
+	question := &message.Question[0]
+	log.Println(getDNSKey(question))
+	answer := getFromCache(question)
+	if answer == nil {
+		answer = resolveDNSQuestion(message)
 		if answer.Answer != nil {
-			putCache(message.Question[0], answer)
+			putCache(question, answer)
 		}
 	}
-	log.Println(questionKey(message.Question[0]))
 	buffer, err := answer.Pack()
 	if err != nil {
-		log.Println(err)
+		log.Println(err.Error())
 		return
 	}
-	udpConnection.WriteToUDP(buffer, udpAddress)
+	udpConnection.WriteToUDP(buffer, dnsQueryAddress)
 }
 
-func submitQuetion(question dns.Msg) dns.Msg {
-	answer := make(chan dns.Msg, 1)
+func resolveDNSQuestion(question *dns.Msg) *dns.Msg {
+	answer := make(chan *dns.Msg, 1)
 	channel <- dnsMessage{question, &answer}
 	return <-answer
 }
@@ -78,9 +77,9 @@ func main() {
 	var buffer []byte
 	for {
 		buffer = make([]byte, 1500)
-		n, addr, err := dnsServer.ReadFromUDP(buffer)
+		_, address, err := dnsServer.ReadFromUDP(buffer)
 		if err == nil {
-			go handle(buffer[0:n], addr, dnsServer)
+			go handle(buffer, address, dnsServer)
 		}
 	}
 }

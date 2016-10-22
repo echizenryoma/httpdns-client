@@ -29,3 +29,5 @@ _testmain.go
 
 # external packages folder
 vendor/
+.idea/
+qdns.iml
