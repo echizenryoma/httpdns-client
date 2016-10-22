@@ -6,10 +6,6 @@ import (
 	"os"
 )
 
-const (
-	tencentPublicDNS = "119.29.29.29"
-)
-
 type config struct {
 	ListenIP      string   `json:"ip"`
 	ListenPort    string   `json:"port"`
