@@ -11,15 +11,16 @@ go build -ldflags "-s -w" .
 ## 用法
 
 ```
-Usage of qdns.exe:
+  -dns string
+        Upstream DNS Server Address (default "119.29.29.29")
+  -httpdns string
+        Tencent HTTP DNS address (default "119.29.29.29")
   -ip string
         DNS bind IP address (default "127.0.0.1")
   -port int
-        listen on port (default 53)
+        Listen on port (default 53)
   -save
-        Save result to sqlite (default true)
-  -server string
-        Tencent HTTP DNS address (default "119.29.29.29")
+        Whether to save the results to a sqlite (default true)
   -workers int
         number of independent workers (default 10)
 ```
