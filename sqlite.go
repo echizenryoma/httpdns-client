@@ -1,4 +1,4 @@
-package qdns
+package main
 
 import (
 	"database/sql"
