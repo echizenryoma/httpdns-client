@@ -29,8 +29,9 @@ go build -ldflags "-s -w" .
 ## 依赖
 
 ```
-github.com/miekg/dns
+github.com/magicdawn/go-co
 github.com/mattn/go-sqlite3
+github.com/miekg/dns
 github.com/patrickmn/go-cache
 golang.org/x/net/publicsuffix
 ```
