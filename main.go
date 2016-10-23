@@ -3,9 +3,7 @@ package main
 import (
 	"flag"
 	"log"
-	"math/rand"
 	"net"
-	"time"
 
 	co "github.com/magicdawn/go-co"
 	"github.com/miekg/dns"
@@ -51,7 +49,6 @@ func main() {
 	if save {
 		initDb()
 	}
-	rand.Seed(time.Now().UnixNano())
 
 	listenUDP := net.UDPAddr{
 		IP:   net.ParseIP(ip),
@@ -64,6 +61,7 @@ func main() {
 	log.Printf("Starting server at udp://%s:%d\n", ip, port)
 	var buffer []byte
 	for {
+		buffer = make([]byte, 512)
 		_, address, err := dnsServer.ReadFromUDP(buffer)
 		if err == nil {
 			go handle(buffer, address, dnsServer)

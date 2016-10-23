@@ -18,7 +18,6 @@ const (
 )
 
 var (
-	workers     = *flag.Int("workers", 10, "number of independent workers")
 	httpDNS     = *flag.String("httpdns", tencentPublicDNS, "Tencent HTTP DNS address")
 	upstreamDNS = *flag.String("dns", tencentPublicDNS, "Upstream DNS Server Address")
 )

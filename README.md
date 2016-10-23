@@ -21,8 +21,6 @@ go build -ldflags "-s -w" .
       Listen on port (default 53)
 -save
       Whether to save the results to a sqlite (default true)
--workers int
-      number of independent workers (default 10)
 ```
 
 
