@@ -26,8 +26,11 @@ var dnsServer []string
 
 func resolveAsync(query *dns.Msg) *co.Task {
 	return co.Async(func() interface{} {
+		if query == nil {
+			return nil
+		}
 		answer := new(dns.Msg)
-		question := query.Question[0]
+		question := &query.Question[0]
 		switch question.Qtype {
 		case dns.TypeA:
 			answer = getTencentHTTPDNS(question)
@@ -42,7 +45,11 @@ func resolveAsync(query *dns.Msg) *co.Task {
 	})
 }
 
-func getTencentHTTPDNS(question dns.Question) *dns.Msg {
+func getTencentHTTPDNS(question *dns.Question) *dns.Msg {
+	if question == nil {
+		return nil
+	}
+
 	var httpClient = &http.Client{Timeout: time.Second * 3, Transport: http.DefaultTransport.(*http.Transport)}
 
 	url := fmt.Sprintf("http://%s/d?dn=%s", httpDNS, question.Name)
@@ -84,14 +91,17 @@ func getTencentHTTPDNS(question dns.Question) *dns.Msg {
 	return answer
 }
 
-func getClientDNS(question dns.Question) *dns.Msg {
+func getClientDNS(question *dns.Question) *dns.Msg {
+	if question == nil {
+		return nil
+	}
+
 	message := new(dns.Msg)
 	message.SetQuestion(question.Name, question.Qtype)
 	answer := new(dns.Msg)
-
 	if question.Qtype == dns.TypePTR && question.Name == "1.0.0.127.in-addr.arpa." {
 		localhost := "tencent.http.dns."
-		answer.Question = append(answer.Question, question)
+		answer.Question = append(answer.Question, *question)
 		header := dns.RR_Header{
 			Name:     question.Name,
 			Rrtype:   question.Qtype,
@@ -107,7 +117,6 @@ func getClientDNS(question dns.Question) *dns.Msg {
 		// log.Println(string(buffer))
 		return answer
 	}
-
 	for _, server := range dnsServer {
 		dnsClient := new(dns.Client)
 		answer, _, err := dnsClient.Exchange(message, server+":53")

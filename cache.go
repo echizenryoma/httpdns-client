@@ -18,7 +18,11 @@ func getFromCache(question *dns.Question) *dns.Msg {
 	if question == nil {
 		return nil
 	}
-	data, found := dnsCache.Get(getDNSKey(question))
+	key := getDNSKey(question)
+	if len(key) <= 0 {
+		return nil
+	}
+	data, found := dnsCache.Get(key)
 	if found {
 		answer := data.(dns.Msg)
 		return &answer

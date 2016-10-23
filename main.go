@@ -4,6 +4,7 @@ import (
 	"flag"
 	"log"
 	"net"
+	"strings"
 
 	co "github.com/magicdawn/go-co"
 	"github.com/miekg/dns"
@@ -30,12 +31,14 @@ func handle(dnsQueryMsg []byte, dnsQueryAddress *net.UDPAddr, udpConnection *net
 	answer := getFromCache(question)
 	if answer == nil {
 		result, _ := co.Await(resolveAsync(message))
-		if result != nil {
-			answer = result.(*dns.Msg)
-			if answer != nil {
-				putCache(question, answer)
-			}
+		if result == nil {
+			return
 		}
+		answer = result.(*dns.Msg)
+		if answer == nil {
+			return
+		}
+		putCache(question, answer)
 	}
 	buffer, err := answer.Pack()
 	if err != nil {
@@ -47,6 +50,7 @@ func handle(dnsQueryMsg []byte, dnsQueryAddress *net.UDPAddr, udpConnection *net
 
 func main() {
 	flag.Parse()
+	dnsServer = strings.Split(upstreamDNS, ";")
 	newDNSCache()
 	if save {
 		initDb()
