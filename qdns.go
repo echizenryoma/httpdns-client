@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	co "github.com/magicdawn/go-co"
 	"github.com/miekg/dns"
 )
 
@@ -24,17 +25,10 @@ var (
 
 var dnsServer []string
 
-func start() {
-	dnsServer = strings.Split(upstreamDNS, ";")
-	for i := 0; i < workers; i++ {
-		go getDNS()
-	}
-}
-
-func getDNS() {
-	for query := range channel {
+func resolveAsync(query *dns.Msg) *co.Task {
+	return co.Async(func() interface{} {
 		answer := new(dns.Msg)
-		question := query.Question.Question[0]
+		question := query.Question[0]
 		switch question.Qtype {
 		case dns.TypeA:
 			answer = getTencentHTTPDNS(question)
@@ -42,11 +36,11 @@ func getDNS() {
 		default:
 			answer = getClientDNS(question)
 		}
-		answer.SetReply(query.Question)
+		answer.SetReply(query)
 		// buffer, _ := json.Marshal(answer)
 		// log.Println(string(buffer))
-		*query.Answer <- answer
-	}
+		return answer
+	})
 }
 
 func getTencentHTTPDNS(question dns.Question) *dns.Msg {

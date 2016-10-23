@@ -7,6 +7,7 @@ import (
 	"net"
 	"time"
 
+	co "github.com/magicdawn/go-co"
 	"github.com/miekg/dns"
 )
 
@@ -14,13 +15,6 @@ var (
 	ip   = *flag.String("ip", "127.0.0.1", "DNS bind IP address")
 	port = *flag.Int("port", 53, "Listen on port")
 )
-
-type dnsMessage struct {
-	Question *dns.Msg
-	Answer   *chan *dns.Msg
-}
-
-var channel = make(chan dnsMessage, 256)
 
 func handle(dnsQueryMsg []byte, dnsQueryAddress *net.UDPAddr, udpConnection *net.UDPConn) {
 	message := new(dns.Msg)
@@ -32,12 +26,15 @@ func handle(dnsQueryMsg []byte, dnsQueryAddress *net.UDPAddr, udpConnection *net
 	if len(message.Question) <= 0 {
 		return
 	}
-	log.Println(getDNSKey(&message.Question[0]))
-	answer := getFromCache(&message.Question[0])
+
+	question := &message.Question[0]
+	log.Println(getDNSKey(question))
+	answer := getFromCache(question)
 	if answer == nil {
-		answer = resolveDNSQuestion(message)
+		result, _ := co.Await(resolveAsync(message))
+		answer = result.(*dns.Msg)
 		if answer != nil {
-			putCache(&message.Question[0], answer)
+			putCache(question, answer)
 		}
 	}
 	buffer, err := answer.Pack()
@@ -46,12 +43,6 @@ func handle(dnsQueryMsg []byte, dnsQueryAddress *net.UDPAddr, udpConnection *net
 		return
 	}
 	udpConnection.WriteToUDP(buffer, dnsQueryAddress)
-}
-
-func resolveDNSQuestion(question *dns.Msg) *dns.Msg {
-	answer := make(chan *dns.Msg, 1)
-	channel <- dnsMessage{question, &answer}
-	return <-answer
 }
 
 func main() {
@@ -70,8 +61,6 @@ func main() {
 	if err != nil {
 		log.Fatalln(err.Error())
 	}
-
-	start()
 	log.Printf("Starting server at udp://%s:%d\n", ip, port)
 	var buffer []byte
 	for {
