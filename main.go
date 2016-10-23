@@ -64,7 +64,6 @@ func main() {
 	log.Printf("Starting server at udp://%s:%d\n", ip, port)
 	var buffer []byte
 	for {
-		buffer = make([]byte, 1500)
 		_, address, err := dnsServer.ReadFromUDP(buffer)
 		if err == nil {
 			go handle(buffer, address, dnsServer)
