@@ -33,7 +33,24 @@ func resolveAsync(query *dns.Msg) *co.Task {
 		question := &query.Question[0]
 		switch question.Qtype {
 		case dns.TypeA:
-			answer = getTencentHTTPDNS(question)
+			if useHosts {
+				answer = getFromHosts(question)
+				if answer == nil {
+					answer = getTencentHTTPDNS(question)
+				}
+			} else {
+				answer = getTencentHTTPDNS(question)
+			}
+			break
+		case dns.TypeAAAA:
+			if useHosts {
+				answer = getFromHosts(question)
+				if answer == nil {
+					answer = getClientDNS(question)
+				}
+			} else {
+				answer = getClientDNS(question)
+			}
 			break
 		default:
 			answer = getClientDNS(question)
@@ -129,5 +146,53 @@ func getClientDNS(question *dns.Question) *dns.Msg {
 		}
 	}
 	answer.Rcode = dns.RcodeServerFailure
+	return answer
+}
+
+func getFromHosts(question *dns.Question) *dns.Msg {
+	if question == nil {
+		return nil
+	}
+	if question.Qtype != dns.TypeA && question.Qtype != dns.TypeAAAA {
+		return nil
+	}
+	message := new(dns.Msg)
+	message.SetQuestion(question.Name, question.Qtype)
+	answer := new(dns.Msg)
+	ipList, err := getHosts(question.Name)
+	if err != nil {
+		return nil
+	}
+
+	switch question.Qtype {
+	case dns.TypeA:
+		for _, ip := range *ipList {
+			if ip.To4() == nil {
+				continue
+			}
+			header := dns.RR_Header{
+				Name:   question.Name,
+				Rrtype: question.Qtype,
+				Class:  dns.ClassINET,
+				Ttl:    10,
+			}
+			dnsRR, _ := dns.NewRR(header.String() + ip.String())
+			answer.Answer = append(answer.Answer, dnsRR)
+		}
+	case dns.TypeAAAA:
+		for _, ip := range *ipList {
+			if ip.To4() != nil {
+				continue
+			}
+			header := dns.RR_Header{
+				Name:   question.Name,
+				Rrtype: question.Qtype,
+				Class:  dns.ClassINET,
+				Ttl:    10,
+			}
+			dnsRR, _ := dns.NewRR(header.String() + ip.String())
+			answer.Answer = append(answer.Answer, dnsRR)
+		}
+	}
 	return answer
 }

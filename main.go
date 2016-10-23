@@ -48,14 +48,19 @@ func handle(dnsQueryMsg []byte, dnsQueryAddress *net.UDPAddr, udpConnection *net
 	udpConnection.WriteToUDP(buffer, dnsQueryAddress)
 }
 
-func main() {
+func init() {
 	flag.Parse()
 	dnsServer = strings.Split(upstreamDNS, ";")
 	newDNSCache()
 	if save {
 		initDb()
 	}
+	if len(hostsFilePath) > 0 {
+		initHosts(hostsFilePath)
+	}
+}
 
+func main() {
 	listenUDP := net.UDPAddr{
 		IP:   net.ParseIP(ip),
 		Port: port,
