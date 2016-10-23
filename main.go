@@ -61,11 +61,10 @@ func init() {
 }
 
 func main() {
-	listenUDP := net.UDPAddr{
+	server, err := net.ListenUDP("udp", &net.UDPAddr{
 		IP:   net.ParseIP(ip),
 		Port: port,
-	}
-	dnsServer, err := net.ListenUDP("udp", &listenUDP)
+	})
 	if err != nil {
 		log.Fatalln(err.Error())
 	}
@@ -73,9 +72,9 @@ func main() {
 	var buffer []byte
 	for {
 		buffer = make([]byte, 512)
-		_, address, err := dnsServer.ReadFromUDP(buffer)
+		_, address, err := server.ReadFromUDP(buffer)
 		if err == nil {
-			go handle(buffer, address, dnsServer)
+			go handle(buffer, address, server)
 		}
 	}
 }
