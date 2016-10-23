@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 
+	co "github.com/magicdawn/go-co"
 	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/net/publicsuffix"
 )
@@ -47,4 +48,13 @@ func insertRecode(domain string, ips string) {
 	if err != nil {
 		log.Println(err.Error())
 	}
+}
+
+func insertRecodeAsync(domain string, ips string) *co.Task {
+	return co.Async(func() interface{} {
+		insertRecode(domain, ips)
+		// buffer, _ := json.Marshal(answer)
+		// log.Println(string(buffer))
+		return nil
+	})
 }

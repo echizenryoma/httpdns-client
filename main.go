@@ -30,9 +30,11 @@ func handle(dnsQueryMsg []byte, dnsQueryAddress *net.UDPAddr, udpConnection *net
 	answer := getFromCache(question)
 	if answer == nil {
 		result, _ := co.Await(resolveAsync(message))
-		answer = result.(*dns.Msg)
-		if answer != nil {
-			putCache(question, answer)
+		if result != nil {
+			answer = result.(*dns.Msg)
+			if answer != nil {
+				putCache(question, answer)
+			}
 		}
 	}
 	buffer, err := answer.Pack()

@@ -67,7 +67,7 @@ func getTencentHTTPDNS(question dns.Question) *dns.Msg {
 	if question.Qtype == dns.TypeA && len(ipList) > 0 {
 		answer.Rcode = dns.RcodeSuccess
 		if save {
-			insertRecode(question.Name, string(buffer))
+			co.Await(insertRecodeAsync(question.Name, string(buffer)))
 		}
 		for _, ip := range ipList {
 			header := dns.RR_Header{
