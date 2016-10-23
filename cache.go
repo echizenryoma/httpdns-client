@@ -18,9 +18,6 @@ func getFromCache(question *dns.Question) *dns.Msg {
 	if question == nil {
 		return nil
 	}
-	if question.Qtype != dns.TypeA {
-		return nil
-	}
 	data, found := dnsCache.Get(getDNSKey(question))
 	if found {
 		answer := data.(dns.Msg)
@@ -30,6 +27,9 @@ func getFromCache(question *dns.Question) *dns.Msg {
 }
 
 func getDNSKey(question *dns.Question) string {
+	if question == nil {
+		return ""
+	}
 	return fmt.Sprintf("%s|%d|%d", question.Name, question.Qclass, question.Qtype)
 }
 
@@ -37,7 +37,6 @@ func putCache(question *dns.Question, answer *dns.Msg) {
 	if question == nil || answer == nil {
 		return
 	}
-
 	// buffer, _ := json.Marshal(answer)
 	// log.Println(string(buffer))
 	if answer.Rcode == dns.RcodeSuccess {

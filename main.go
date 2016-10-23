@@ -32,13 +32,12 @@ func handle(dnsQueryMsg []byte, dnsQueryAddress *net.UDPAddr, udpConnection *net
 	if len(message.Question) <= 0 {
 		return
 	}
-	question := &message.Question[0]
-	log.Println(getDNSKey(question))
-	answer := getFromCache(question)
+	log.Println(getDNSKey(&message.Question[0]))
+	answer := getFromCache(&message.Question[0])
 	if answer == nil {
 		answer = resolveDNSQuestion(message)
-		if answer.Answer != nil {
-			putCache(question, answer)
+		if answer != nil {
+			putCache(&message.Question[0], answer)
 		}
 	}
 	buffer, err := answer.Pack()

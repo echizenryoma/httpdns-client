@@ -43,6 +43,8 @@ func getDNS() {
 			answer = getClientDNS(question)
 		}
 		answer.SetReply(query.Question)
+		// buffer, _ := json.Marshal(answer)
+		// log.Println(string(buffer))
 		*query.Answer <- answer
 	}
 }
@@ -55,35 +57,37 @@ func getTencentHTTPDNS(question dns.Question) *dns.Msg {
 	response, err := httpClient.Do(httpGet)
 
 	answer := new(dns.Msg)
-	if err == nil {
-		buffer, _ := ioutil.ReadAll(response.Body)
-		response.Body.Close()
-		if response.StatusCode == 200 {
-			ipList := strings.Split(string(buffer), ";")
-			if question.Qtype == dns.TypeA && len(ipList) > 0 {
-				answer.Rcode = dns.RcodeSuccess
-				if save {
-					insertRecode(question.Name, string(buffer))
-				}
-				for _, ip := range ipList {
-					header := dns.RR_Header{
-						Name:   question.Name,
-						Rrtype: question.Qtype,
-						Class:  dns.ClassINET,
-						Ttl:    10,
-					}
-					dnsRR, _ := dns.NewRR(header.String() + ip)
-					answer.Answer = append(answer.Answer, dnsRR)
-				}
-			}
-			log.Printf("%s|%s\n", question.Name, string(buffer))
-		} else {
-			answer.Rcode = dns.RcodeServerFailure
-		}
-	} else {
+	buffer, _ := ioutil.ReadAll(response.Body)
+	response.Body.Close()
+	if err != nil {
 		answer.Rcode = dns.RcodeServerFailure
 		log.Println(err.Error())
+		return answer
 	}
+
+	if response.StatusCode != 200 || len(buffer) <= 0 {
+		answer.Rcode = dns.RcodeNotZone
+		return answer
+	}
+
+	ipList := strings.Split(string(buffer), ";")
+	if question.Qtype == dns.TypeA && len(ipList) > 0 {
+		answer.Rcode = dns.RcodeSuccess
+		if save {
+			insertRecode(question.Name, string(buffer))
+		}
+		for _, ip := range ipList {
+			header := dns.RR_Header{
+				Name:   question.Name,
+				Rrtype: question.Qtype,
+				Class:  dns.ClassINET,
+				Ttl:    10,
+			}
+			dnsRR, _ := dns.NewRR(header.String() + ip)
+			answer.Answer = append(answer.Answer, dnsRR)
+		}
+	}
+	log.Printf("%s|%s\n", question.Name, string(buffer))
 	return answer
 }
 
