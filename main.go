@@ -38,7 +38,7 @@ func handle(dnsQueryMsg []byte, dnsQueryAddress *net.UDPAddr, udpConnection *net
 		if answer == nil {
 			return
 		}
-		putCache(question, answer)
+		appendDNSCache(question, answer)
 	}
 	buffer, err := answer.Pack()
 	if err != nil {
@@ -50,8 +50,8 @@ func handle(dnsQueryMsg []byte, dnsQueryAddress *net.UDPAddr, udpConnection *net
 
 func init() {
 	flag.Parse()
-	dnsServer = strings.Split(upstreamDNS, ";")
-	newDNSCache()
+	dnsServers = strings.Split(upstreamDNS, ";")
+	initCache()
 	if save {
 		initDb()
 	}

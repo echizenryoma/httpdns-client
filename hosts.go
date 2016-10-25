@@ -14,7 +14,7 @@ var (
 )
 
 var hostsFile *hosts.Hostsfile
-var useHosts bool
+var useHosts = false
 
 func initHosts(path string) {
 	useHosts = false

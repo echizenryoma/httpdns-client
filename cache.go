@@ -10,7 +10,7 @@ import (
 
 var dnsCache *cache.Cache
 
-func newDNSCache() {
+func initCache() {
 	dnsCache = cache.New(24*time.Hour, 60*time.Second)
 }
 
@@ -37,7 +37,7 @@ func getDNSKey(question *dns.Question) string {
 	return fmt.Sprintf("%s|%d|%d", question.Name, question.Qclass, question.Qtype)
 }
 
-func putCache(question *dns.Question, answer *dns.Msg) {
+func appendDNSCache(question *dns.Question, answer *dns.Msg) {
 	if question == nil || answer == nil {
 		return
 	}

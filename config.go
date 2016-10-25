@@ -7,14 +7,14 @@ import (
 )
 
 type config struct {
-	ListenIP      string   `json:"ip"`
-	ListenPort    string   `json:"port"`
-	HTTPDNSServer string   `json:"http_dns"`
-	DNSServer     []string `json:"dns"`
-	Workers       uint16   `json:"workers"`
+	ListenIP   string   `json:"ip"`
+	ListenPort string   `json:"port"`
+	HTTPDNS    string   `json:"http_dns"`
+	DNS        []string `json:"dns"`
+	Hosts      string   `json:"hosts"`
 }
 
-func getConfig(path string) (*config, error) {
+func readConfig(path string) (*config, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err

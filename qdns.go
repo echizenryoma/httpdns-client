@@ -22,7 +22,7 @@ var (
 	upstreamDNS = *flag.String("dns", tencentPublicDNS, "Upstream DNS Server Address")
 )
 
-var dnsServer []string
+var dnsServers []string
 
 func resolveAsync(query *dns.Msg) *co.Task {
 	return co.Async(func() interface{} {
@@ -134,7 +134,7 @@ func getClientDNS(question *dns.Question) *dns.Msg {
 		// log.Println(string(buffer))
 		return answer
 	}
-	for _, server := range dnsServer {
+	for _, server := range dnsServers {
 		dnsClient := new(dns.Client)
 		answer, _, err := dnsClient.Exchange(message, server+":53")
 		if err != nil {
