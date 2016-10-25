@@ -4,6 +4,7 @@ import (
 	"flag"
 	"log"
 	"net"
+	"os"
 	"strings"
 
 	co "github.com/magicdawn/go-co"
@@ -13,6 +14,7 @@ import (
 var (
 	ip   = *flag.String("ip", "127.0.0.1", "DNS bind IP address")
 	port = *flag.Int("port", 53, "Listen on port")
+	conf = *flag.String("conf", "config.json", "Configure file path")
 )
 
 func handle(dnsQueryMsg []byte, dnsQueryAddress *net.UDPAddr, udpConnection *net.UDPConn) {
@@ -48,8 +50,20 @@ func handle(dnsQueryMsg []byte, dnsQueryAddress *net.UDPAddr, udpConnection *net
 	udpConnection.WriteToUDP(buffer, dnsQueryAddress)
 }
 
+func check() {
+	ip = strings.TrimSpace(ip)
+	if net.ParseIP(ip) == nil {
+		ip = "127.0.0.1"
+	}
+}
+
 func init() {
 	flag.Parse()
+	check()
+	_, err := os.Open(conf)
+	if err == nil {
+		initConfig(conf)
+	}
 	dnsServers = strings.Split(upstreamDNS, ";")
 	initCache()
 	if save {
