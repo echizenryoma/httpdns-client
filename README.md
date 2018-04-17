@@ -11,16 +11,20 @@ go build -ldflags "-s -w" .
 ## 用法
 
 ```
+-conf string
+	Configure file path (default "config.json")
 -dns string
-      Upstream DNS Server Address (default "119.29.29.29")
+	Upstream DNS Server Address (default "119.29.29.29")
+-hosts string
+	Hosts File Path (default "hosts")
 -httpdns string
-      Tencent HTTP DNS address (default "119.29.29.29")
+	Tencent HTTP DNS address (default "119.29.29.29")
 -ip string
-      DNS bind IP address (default "127.0.0.1")
+	DNS bind IP address (default "127.0.0.1")
 -port int
-      Listen on port (default 53)
+	Listen on port (default 53)
 -save
-      Whether to save the results to a sqlite (default true)
+	Whether to save the results to a sqlite (default true)
 ```
 
 
