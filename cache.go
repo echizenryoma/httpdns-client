@@ -8,39 +8,33 @@ import (
 	cache "github.com/patrickmn/go-cache"
 )
 
-var dnsCache *cache.Cache
+var DNSCache *cache.Cache
 
 func initCache() {
-	dnsCache = cache.New(24*time.Hour, 60*time.Second)
+	if DNSCache == nil {
+		DNSCache = cache.New(15*time.Minute, 60*time.Second)
+	}
 }
 
-func getFromCache(question *dns.Question) *dns.Msg {
-	if question == nil {
-		return nil
-	}
-	key := getDNSKey(question)
+func GetFromCache(question dns.Question) (answer dns.Msg, found bool) {
+	key := GetDNSKey(question)
 	if len(key) <= 0 {
-		return nil
+		found = false
+		return
 	}
-	data, found := dnsCache.Get(key)
+	data, found := DNSCache.Get(key)
 	if found {
-		answer := data.(dns.Msg)
-		return &answer
+		answer = data.(dns.Msg)
+		return
 	}
-	return nil
+	return
 }
 
-func getDNSKey(question *dns.Question) string {
-	if question == nil {
-		return ""
-	}
+func GetDNSKey(question dns.Question) string {
 	return fmt.Sprintf("%s|%d|%d", question.Name, question.Qclass, question.Qtype)
 }
 
-func appendDNSCache(question *dns.Question, answer *dns.Msg) {
-	if question == nil || answer == nil {
-		return
-	}
+func AppendDNSCache(question dns.Question, answer dns.Msg) {
 	// buffer, _ := json.Marshal(answer)
 	// log.Println(string(buffer))
 	if answer.Rcode == dns.RcodeSuccess {
@@ -65,6 +59,6 @@ func appendDNSCache(question *dns.Question, answer *dns.Msg) {
 				ttl = rr.Ttl
 			}
 		}
-		dnsCache.Set(getDNSKey(question), *answer, time.Duration(ttl)*time.Second)
+		DNSCache.Add(GetDNSKey(question), answer, time.Duration(ttl)*time.Second)
 	}
 }

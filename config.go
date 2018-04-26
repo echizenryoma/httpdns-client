@@ -3,53 +3,41 @@ package main
 import (
 	"encoding/json"
 	"io/ioutil"
-	"log"
-	"net"
 	"os"
 )
 
-type config struct {
-	ListenIP   string   `json:"ip"`
-	ListenPort int      `json:"port"`
+type Config struct {
+	ListenAddr string   `json:"listen"`
 	HTTPDNS    string   `json:"http_dns"`
 	DNS        []string `json:"dns"`
-	Hosts      string   `json:"hosts"`
 }
 
-func readConfig(path string) (*config, error) {
+var config Config
+
+func readConfig(path string) (err error) {
 	f, err := os.Open(path)
 	if err != nil {
-		return nil, err
+		return
 	}
-	jsonBytes, err := ioutil.ReadAll(f)
+	bytes, err := ioutil.ReadAll(f)
 	if err != nil {
-		return nil, err
+		return
 	}
-	var config config
-	if err := json.Unmarshal(jsonBytes, &config); err != nil {
-		return nil, err
+	err = json.Unmarshal(bytes, &config)
+	if err != nil {
+		return
 	}
-	return &config, nil
+	return
 }
 
-func initConfig(path string) {
-	_, err := os.Open(path)
+func initConfig(path string) (err error) {
+	_, err = os.Open(path)
 	if err != nil {
 		return
 	}
-	config, err := readConfig(path)
+	err = readConfig(path)
 	if err != nil {
-		log.Println(err.Error())
 		return
 	}
-	if net.ParseIP(config.ListenIP) != nil {
-		ip = config.ListenIP
-	}
-	if config.ListenPort >= 1 && config.ListenPort <= 65535 {
-		port = config.ListenPort
-	}
-	if len(config.DNS) > 0 {
-		dnsServers = config.DNS
-	}
-	httpDNS = config.HTTPDNS
+	return
 }
