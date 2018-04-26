@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/miekg/dns"
@@ -9,11 +10,14 @@ import (
 )
 
 var DNSCache *cache.Cache
+var DNSCacheInitOnce sync.Once
 
 func initCache() {
-	if DNSCache == nil {
-		DNSCache = cache.New(15*time.Minute, 60*time.Second)
-	}
+	DNSCacheInitOnce.Do(func() {
+		if DNSCache == nil {
+			DNSCache = cache.New(15*time.Minute, 60*time.Second)
+		}
+	})
 }
 
 func GetFromCache(question dns.Question) (answer dns.Msg, found bool) {
