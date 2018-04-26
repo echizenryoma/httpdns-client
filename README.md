@@ -1,6 +1,6 @@
-# qdns
+# HTTP DNS Client
 
-一个基于GO语言编写的使用HTTP DNS的客户端。
+HTTP DNS的客户端
 
 ## 编译
 
